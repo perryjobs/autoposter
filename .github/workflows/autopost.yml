@@ -1,1 +1,41 @@
+name: Social Auto‑Poster
+on:
+  schedule:       # every 15 min look for due posts
+    - cron:  '*/15 * * * *'
+  push:           # also run when you add/edit posts
+    paths:
+      - 'posts/**'
+env:
+  TZ: America/Jamaica
+jobs:
+  autopost:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Install deps
+        run: |
+          pip install tweepy==4.* requests pyyaml python-dotenv
+      - name: Run poster
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_ACCOUNT_ID:   ${{ secrets.IG_ACCOUNT_ID }}
+          TW_CONSUMER_KEY: ${{ secrets.TW_CONSUMER_KEY }}
+          TW_CONSUMER_SECRET: ${{ secrets.TW_CONSUMER_SECRET }}
+          TW_ACCESS_TOKEN: ${{ secrets.TW_ACCESS_TOKEN }}
+          TW_ACCESS_SECRET: ${{ secrets.TW_ACCESS_SECRET }}
+        run: |
+          python autoposter.py
+      - name: Commit status change
+        if: steps.autopost.outcome == 'success'
+        run: |
+          git config --global user.name  'AutoPoster Bot'
+          git config --global user.email 'bot@example.com'
+          if [ -n "$(git status --porcelain)" ]; then
+            git add posts
+            git commit -m "Mark posts as published [skip ci]"
+            git push
+          fi
 
